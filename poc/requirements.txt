@@ -1,0 +1,6 @@
+requests
+SPARQLWrapper
+edge-tts
+google-genai
+qrcode[pil]
+Pillow

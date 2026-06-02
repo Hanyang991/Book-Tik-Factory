@@ -1,52 +1,42 @@
-"""Probe 정보나루(data4library) Open API endpoints to verify real response shapes."""
-import os
+"""
+정보나루(data4library) 엔드포인트 점검 — 키 활성화 후 응답 형태 확인용.
+LIBRARY_API_KEY 환경변수 필요. 라이브 검증 완료(2026-06).
+
+사용: python probe_data4library.py
+"""
+import datetime
 import json
-import requests
+import os
 
-KEY = os.environ["LIBRARY_API_KEY"]
-BASE = "https://data4library.kr/api"
+import enrich
+
+ISBN = "9788937473135"  # 82년생 김지영
+REGION = "11"           # 서울
 
 
-def call(name, params):
-    params = {"authKey": KEY, "format": "json", **params}
-    print("=" * 70)
-    print(f"### {name}  params={ {k: v for k, v in params.items() if k != 'authKey'} }")
-    try:
-        r = requests.get(f"{BASE}/{name}", params=params, timeout=30)
-        print("HTTP", r.status_code, "ct=", r.headers.get("content-type"))
-        try:
-            data = r.json()
-        except Exception:
-            print("NON-JSON body (first 400):", r.text[:400])
-            return None
-        # print top-level structure
-        resp = data.get("response", data)
-        if isinstance(resp, dict):
-            print("response keys:", list(resp.keys()))
-            for k, v in resp.items():
-                if isinstance(v, list) and v:
-                    print(f"  [{k}] list len={len(v)}; sample item:")
-                    print("   ", json.dumps(v[0], ensure_ascii=False)[:500])
-                elif isinstance(v, dict):
-                    print(f"  [{k}] dict keys:", list(v.keys()))
-                else:
-                    print(f"  [{k}] = {str(v)[:120]}")
-        else:
-            print("raw:", json.dumps(data, ensure_ascii=False)[:500])
-        return data
-    except Exception as e:
-        print("ERROR:", repr(e))
-        return None
+def main():
+    if not os.environ.get("LIBRARY_API_KEY"):
+        raise SystemExit("LIBRARY_API_KEY가 설정되지 않았습니다.")
+
+    print("== usageAnalysisList (서지+소개+키워드+표지+대출) ==")
+    print(json.dumps(enrich.get_book_usage(ISBN), ensure_ascii=False, indent=2)[:600])
+
+    print("\n== estimate_turnover (근사 회전율) ==")
+    print(enrich.estimate_turnover(ISBN, region=REGION))
+
+    print("\n== libSrchByBook (소장 도서관 locate) ==")
+    print(enrich.find_holding_libraries(ISBN, region=REGION, limit=3))
+
+    print("\n== hotTrend (대출 급상승 화제 도서) ==")
+    last_sunday = datetime.date.today() - datetime.timedelta(
+        days=datetime.date.today().weekday() + 1)
+    for b in enrich.get_trending_books(last_sunday.isoformat(), limit=3):
+        print(f"  +{b['rank_jump']:>4}  {b['title']}  ({b['isbn']})")
+
+    print("\n== loanItemSrch (지역·연령 인기대출) ==")
+    for b in enrich.get_popular_books(REGION, "20", "2026-05-01", "2026-05-31", limit=3):
+        print(f"  loan={b['loan_count']:>4}  {b['title']}  ({b['isbn']})")
 
 
 if __name__ == "__main__":
-    # 1) 인기 대출 도서 (지역=서울 11, 20대=20)
-    call("loanItemSrch", {"startDt": "2026-05-01", "endDt": "2026-05-31", "region": "11", "age": "20", "pageSize": "5"})
-    # 2) 대출 급상승 도서 (hotTrend)
-    call("hotTrend", {"searchDt": "2026-05-25"})
-    # 3) 도서 소장 도서관 조회 (libSrchByBook) — ISBN 예시
-    call("libSrchByBook", {"isbn": "9788937473135", "region": "11", "pageSize": "5"})
-    # 4) 도서 소장/대출 가능 여부 (bookExist) — 특정 도서관
-    call("bookExist", {"libCode": "111003", "isbn13": "9788937473135"})
-    # 5) 도서관별 장서/대출 (usageAnalysisList) — 회전율 후보
-    call("usageAnalysisList", {"isbn13": "9788937473135"})
+    main()

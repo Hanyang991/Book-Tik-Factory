@@ -1,0 +1,4 @@
+fastapi
+uvicorn[standard]
+# 생성 파이프라인은 poc/ 모듈 재사용 (requests, SPARQLWrapper, edge-tts, google-genai, qrcode, Pillow)
+-r ../poc/requirements.txt

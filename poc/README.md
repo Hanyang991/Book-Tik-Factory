@@ -12,10 +12,13 @@
 | Gemini 2.5 Flash (`google-genai`) | ✅ 동작 | 503(고수요) 간헐 발생 → 재시도 로직 포함 |
 | Edge TTS | ✅ 동작 | `ko-KR-SunHiNeural`, rate/pitch 부호 필수(`+0%`/`+0Hz`) |
 | FFmpeg 렌더링 + 한글 자막 + QR overlay | ✅ 동작 | 1080×1920, 글자수 가중 SRT, QR은 마지막 3초 우하단 |
-| 정보나루(회전율·hotTrend·locate) | ⚠️ 미검증 | 인증키 **활성화 전**(`vitalizationErr`). 활성화 후 `probe_data4library.py`로 검증 |
+| 정보나루(회전율·hotTrend·locate) | ✅ 동작 | 키 활성화 후 5개 엔드포인트 검증. `usageAnalysisList`/`hotTrend`/`libSrchByBook`/`bookExist`/`loanItemSrch`. 상세는 [`RESULTS.md`](RESULTS.md) |
 
 > LOD 엔진(ontobase)은 리터럴 끝에 `~`를 덧붙이고 `<subj> ?p ?o` 형태 쿼리에서 오류가 나므로,
 > 술어를 명시한 패턴으로 조회하고 값 끝의 `~`를 제거한다(`pipeline._clean`).
+>
+> 정보나루 `usageAnalysisList`가 책소개·키워드·실제 표지를 주므로, 대본 품질과 배경이
+> LOD만 쓸 때보다 좋다. `generate.py`는 정보나루를 1차 소스, LOD를 폴백으로 둔다.
 
 ## 실행
 
@@ -28,13 +31,27 @@ pip install -r requirements.txt
 export GEMINI_API_KEY=...        # https://aistudio.google.com/apikey
 export LIBRARY_API_KEY=...       # 정보나루 인증키(활성화 필요) — LOD/Gemini PoC엔 불필요
 
-python pipeline.py 9788937473135   # 인자 생략 시 기본 ISBN
-# -> outputs/<isbn>.mp4
+python pipeline.py 9788937473135   # LOD 전용 최소 경로(키 없이 검증 가능)
+python generate.py 9788937473135  # 정보나루+LOD 통합(표지 배경·locate, LIBRARY_API_KEY 필요)
+python batch_demo.py              # 여러 권 일괄 생성 + 릴 concat(발표용)
+python probe_data4library.py      # 정보나루 5개 엔드포인트 점검
+# -> outputs/<isbn>.mp4 , outputs/demo_reel.mp4
 ```
+
+## 파일
+
+| 파일 | 설명 |
+|------|------|
+| `pipeline.py` | LOD 전용 최소 경로(서지→대본→TTS→배경→자막→렌더) |
+| `enrich.py` | 정보나루 5개 함수(이용분석·화제·소장·인기·근사 회전율) |
+| `generate.py` | 정보나루+LOD 통합 생성기(표지 배경, locate, 단계 콜백) |
+| `batch_demo.py` | 여러 권 일괄 생성 + 릴 concat |
+| `probe_data4library.py` | 정보나루 응답 형태 점검 |
+| `RESULTS.md` | 검증 결과 요약 |
 
 ## 한계 (의도된 PoC 범위)
 
-- 배경 이미지는 PoC용 그라데이션(Pillow). 정식은 Pexels API 장르 이미지.
-- 정보나루 의존 기능(회전율 기반 선정, 화제 도서 hotTrend, 소장 도서관 locate)은
-  키 활성화 후 별도 검증.
-- 자동화(스케줄러)·Job 큐·API 서버는 프로토타입 단계에서 추가.
+- 배경: 표지가 있으면 실제 표지(흐림 배경+카드), 없으면 그라데이션 폴백. 정식은 Pexels 보강 가능.
+- 근사 회전율은 `loanCnt / 지역 소장 도서관 수` 프록시. 정식은 사서 CSV(솔로몬)로 보강.
+- 회전율 기반 선정(타입 A/B) 배치 정렬은 프로토타입(`api/`)에서 확장.
+- 자동화(APScheduler)·Job 큐(Celery)는 프로토타입 단계에서 추가(`api/README.md` 참고).

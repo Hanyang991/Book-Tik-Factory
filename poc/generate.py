@@ -86,8 +86,19 @@ DURATION_PRESETS = {
 }
 
 
+_book_cache: dict[str, tuple[float, dict]] = {}
+_BOOK_CACHE_TTL = 1800  # 30분
+
+
 def build_book(isbn: str) -> dict:
-    """정보나루 우선, 실패 시 LOD 폴백."""
+    """정보나루 우선, 실패 시 LOD 폴백. 결과를 30분간 캐시."""
+    import time as _time
+    if isbn in _book_cache:
+        cached_at, cached = _book_cache[isbn]
+        if _time.time() - cached_at < _BOOK_CACHE_TTL:
+            print(f"  [Cache HIT] build_book {isbn}")
+            return cached
+
     book = {}
     try:
         if os.environ.get("LIBRARY_API_KEY"):
@@ -102,6 +113,8 @@ def build_book(isbn: str) -> dict:
         book.setdefault("description", "")
         book.setdefault("cover_url", "")
         book.setdefault("genre", book.get("subject", ""))
+
+    _book_cache[isbn] = (_time.time(), book)
     return book
 
 

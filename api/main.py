@@ -16,6 +16,8 @@ APScheduler로 매주 자동 배치(build_weekly_targets).
 import os
 import sys
 import math
+import time
+import threading
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -154,13 +156,31 @@ def get_book_metadata(isbn: str):
         raise HTTPException(500, f"도서 정보 조회 실패: {e}")
 
 
+# -------------------------------------------------------------
+# 큐레이션 결과 캐시 (동일 파라미터 10분 TTL)
+# -------------------------------------------------------------
+_curation_cache: dict[str, tuple[float, dict]] = {}
+_curation_cache_lock = threading.Lock()
+_CURATION_TTL = 600  # 10분
+
+
 @app.get("/api/curation")
 def curation(region: str = "11", age: str = "20", search_date: str | None = None,
              pool_size: int = 12, per_type: int = 2):
-    """회전율 기반 주간 제작 대상 자동 선정(타입 A/B/C). 
+    """회전율 기반 주간 제작 대상 자동 선정(타입 A/B/C).
     
+    동일 파라미터 요청은 10분간 캐시하여 정보나루 API 재호출을 방지합니다.
     로컬 디렉토리에 solomon.csv 또는 curation.csv가 있을 경우 분석에 교차 연동함.
     """
+    cache_key = f"{region}:{age}:{pool_size}:{per_type}:{search_date}"
+
+    with _curation_cache_lock:
+        if cache_key in _curation_cache:
+            cached_at, cached_data = _curation_cache[cache_key]
+            if time.time() - cached_at < _CURATION_TTL:
+                print(f"[Cache HIT] curation {cache_key} (age {int(time.time() - cached_at)}s)")
+                return cached_data
+
     solomon_path = os.path.join(os.path.dirname(__file__), "solomon.csv")
     curation_path = os.path.join(os.path.dirname(__file__), "curation.csv")
     if not os.path.exists(solomon_path):
@@ -168,12 +188,18 @@ def curation(region: str = "11", age: str = "20", search_date: str | None = None
     if not os.path.exists(curation_path):
         curation_path = os.path.join(os.path.dirname(__file__), "..", "curation.csv")
 
-    return curate.build_weekly_targets(
+    result = curate.build_weekly_targets(
         region=region, age=age, search_date=search_date,
         pool_size=pool_size, per_type=per_type,
         solomon_path=solomon_path if os.path.exists(solomon_path) else None,
         curation_path=curation_path if os.path.exists(curation_path) else None
     )
+
+    with _curation_cache_lock:
+        _curation_cache[cache_key] = (time.time(), result)
+        print(f"[Cache SET] curation {cache_key}")
+
+    return result
 
 
 @app.get("/video/{job_id}")

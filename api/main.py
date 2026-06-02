@@ -7,6 +7,7 @@ PoC에서 검증한 생성 파이프라인(poc/generate.py)을 비동기 Job으�
   GET  /api/jobs        -> 전체 Job 목록
   GET  /api/trending    -> hotTrend 화제 도서(타입 C)
   GET  /api/locate/{isbn} -> 소장 도서관(가까운 곳 안내)
+  GET  /api/curation    -> 회전율 기반 주간 제작 대상(타입 A/B/C 자동 선정)
   GET  /video/{job_id}  -> 완성 MP4 다운로드
 
 정식 단계 교체 지점: 인메모리 JobStore -> Redis/DB, BackgroundTasks -> Celery,
@@ -23,6 +24,7 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "poc"))
 import generate  # noqa: E402
 import enrich     # noqa: E402
+import curate     # noqa: E402
 from jobs import store  # noqa: E402
 
 app = FastAPI(title="Book-Tik Factory API (prototype)")
@@ -80,6 +82,15 @@ def trending(search_date: str, limit: int = 10):
 def locate(isbn: str, region: str = "11", limit: int = 5):
     """해당 ISBN을 소장한 도서관(가까운 곳 안내용)."""
     return enrich.find_holding_libraries(isbn, region=region, limit=limit)
+
+
+@app.get("/api/curation")
+def curation(region: str = "11", age: str = "20", search_date: str | None = None,
+             pool_size: int = 12, per_type: int = 2):
+    """회전율 기반 주간 제작 대상 자동 선정(타입 A/B/C). 영상 생성은 하지 않는다."""
+    return curate.build_weekly_targets(
+        region=region, age=age, search_date=search_date,
+        pool_size=pool_size, per_type=per_type)
 
 
 @app.get("/video/{job_id}")

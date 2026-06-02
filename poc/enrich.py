@@ -79,9 +79,14 @@ def get_trending_books(search_date: str, limit: int = 10) -> list[dict]:
     return out
 
 
-def get_popular_books(region: str, age: str, start: str, end: str, limit: int = 10) -> list[dict]:
-    """loanItemSrch → 지역·연령별 인기대출 도서(후보 풀)."""
-    j = _get("loanItemSrch", region=region, age=age, startDt=start, endDt=end, pageSize=str(limit))
+def get_popular_books(region: str, age: str, start: str, end: str,
+                      limit: int = 10, page: int = 1) -> list[dict]:
+    """loanItemSrch → 지역·연령별 인기대출 도서(후보 풀).
+
+    page를 키우면 순위가 낮은(대출 적은) 도서까지 후보로 끌어올 수 있다.
+    """
+    j = _get("loanItemSrch", region=region, age=age, startDt=start, endDt=end,
+             pageNo=str(page), pageSize=str(limit))
     return [
         {"isbn": d["doc"].get("isbn13", ""), "title": d["doc"].get("bookname", ""),
          "loan_count": int(d["doc"].get("loan_count", 0) or 0)}

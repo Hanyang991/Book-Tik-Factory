@@ -90,6 +90,50 @@ _book_cache: dict[str, tuple[float, dict]] = {}
 _BOOK_CACHE_TTL = 1800  # 30분
 
 
+def fetch_cover_fallback(isbn: str) -> str | None:
+    """정보나루에 표지가 없을 때 YES24와 알라딘에서 긁어서 표지 이미지 URL을 반환."""
+    import requests
+    import re
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+
+    # 1) YES24 시도
+    try:
+        url = f"https://www.yes24.com/Product/Search?domain=BOOK&query={isbn}"
+        r = requests.get(url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            urls = re.findall(r'https://image\.yes24\.com/goods/\d+/[^"\'\s>]+', r.text)
+            for u in urls:
+                if any(x in u for x in ['XL', 'L', 'M', 'normal']):
+                    clean_url = u.split('?')[0].split('"')[0].split("'")[0]
+                    return clean_url
+            if urls:
+                return urls[0].split('?')[0].split('"')[0].split("'")[0]
+    except Exception as e:
+        print(f"     (YES24 표지 크롤링 실패): {e}")
+
+    # 2) 알라딘 시도
+    try:
+        url = f"https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord={isbn}"
+        r = requests.get(url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            urls = re.findall(r'https://image\.aladin\.co\.kr/product/\d+/\d+/[^"\'\s>]+', r.text)
+            if not urls:
+                urls = re.findall(r'https://image\.aladin\.co\.kr/cover/[^"\'\s>]+', r.text)
+            for u in urls:
+                if 'SpineShelf' not in u and ('cover' in u or 'product' in u):
+                    clean_url = u.split('?')[0].split('"')[0].split("'")[0]
+                    return clean_url
+            if urls:
+                return urls[0].split('?')[0].split('"')[0].split("'")[0]
+    except Exception as e:
+        print(f"     (알라딘 표지 크롤링 실패): {e}")
+
+    return None
+
+
 def build_book(isbn: str) -> dict:
     """정보나루 우선, 실패 시 LOD 폴백. 결과를 30분간 캐시."""
     import time as _time
@@ -113,6 +157,13 @@ def build_book(isbn: str) -> dict:
         book.setdefault("description", "")
         book.setdefault("cover_url", "")
         book.setdefault("genre", book.get("subject", ""))
+
+    # 표지가 누락되었거나 빈 값인 경우 크롤링 기반 Fallback 적용
+    if not book.get("cover_url"):
+        fallback_cover = fetch_cover_fallback(isbn)
+        if fallback_cover:
+            book["cover_url"] = fallback_cover
+            print(f"  [Cover Fallback 성공] {isbn} -> {fallback_cover}")
 
     _book_cache[isbn] = (_time.time(), book)
     return book

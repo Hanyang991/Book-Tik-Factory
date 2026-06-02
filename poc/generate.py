@@ -91,45 +91,76 @@ _BOOK_CACHE_TTL = 1800  # 30분
 
 
 def fetch_cover_fallback(isbn: str) -> str | None:
-    """정보나루에 표지가 없을 때 YES24와 알라딘에서 긁어서 표지 이미지 URL을 반환."""
+    """정보나루에 표지가 없을 때 알라딘과 YES24에서 긁어서 표지 이미지 URL을 반환."""
     import requests
+    from bs4 import BeautifulSoup
     import re
 
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
 
-    # 1) YES24 시도
-    try:
-        url = f"https://www.yes24.com/Product/Search?domain=BOOK&query={isbn}"
-        r = requests.get(url, headers=headers, timeout=8)
-        if r.status_code == 200:
-            urls = re.findall(r'https://image\.yes24\.com/goods/\d+/[^"\'\s>]+', r.text)
-            for u in urls:
-                if any(x in u for x in ['XL', 'L', 'M', 'normal']):
-                    clean_url = u.split('?')[0].split('"')[0].split("'")[0]
-                    return clean_url
-            if urls:
-                return urls[0].split('?')[0].split('"')[0].split("'")[0]
-    except Exception as e:
-        print(f"     (YES24 표지 크롤링 실패): {e}")
-
-    # 2) 알라딘 시도
+    # 1) 알라딘 시도 (가장 빠르고 정확함)
     try:
         url = f"https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord={isbn}"
         r = requests.get(url, headers=headers, timeout=8)
         if r.status_code == 200:
-            urls = re.findall(r'https://image\.aladin\.co\.kr/product/\d+/\d+/[^"\'\s>]+', r.text)
-            if not urls:
-                urls = re.findall(r'https://image\.aladin\.co\.kr/cover/[^"\'\s>]+', r.text)
+            soup = BeautifulSoup(r.text, 'html.parser')
+            # 검색 결과의 ss_book_box 중 첫 번째 책
+            book_boxes = soup.find_all('div', class_='ss_book_box')
+            if book_boxes:
+                first_box = book_boxes[0]
+                img = first_box.find('img', class_='front_cover') or first_box.find('img')
+                if img and img.get('src'):
+                    src = img.get('src')
+                    if 'SpineShelf' not in src:
+                        # 알라딘은 보통 cover200/ 이나 cover150/ 처럼 작은 이미지를 주는데,
+                        # cover500/ 으로 주소를 치환하면 더 선명한 표지를 얻을 수 있음!
+                        high_res = src.replace('cover200', 'cover500').replace('cover150', 'cover500')
+                        return high_res.split('?')[0]
+            
+            # 차선책: 그냥 front_cover 클래스 매칭
+            covers = soup.find_all('img', class_='front_cover')
+            if covers and covers[0].get('src'):
+                src = covers[0].get('src')
+                high_res = src.replace('cover200', 'cover500').replace('cover150', 'cover500')
+                return high_res.split('?')[0]
+    except Exception as e:
+        print(f"     (알라딘 표지 크롤링 실패): {e}")
+
+    # 2) YES24 시도 (알라딘 실패 시 폴백)
+    try:
+        url = f"https://www.yes24.com/Product/Search?domain=BOOK&query={isbn}"
+        r = requests.get(url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.text, 'html.parser')
+            # 광고 영역 등을 배제하고 진짜 상품 목록 ul.yesSchList 내부 첫 번째 상품 찾기
+            sch_list = soup.find('ul', class_='yesSchList') or soup.find(id='yesSchList')
+            if sch_list:
+                first_item = sch_list.find('li')
+                if first_item:
+                    img = first_item.find('img')
+                    if img:
+                        src = img.get('data-original') or img.get('src')
+                        if src:
+                            return src.split('?')[0]
+            
+            # 차선책: 상품 이미지 클래스 'img_bdr'의 첫 번째 것 가져오기
+            img_bdr = soup.find('img', class_='img_bdr')
+            if img_bdr:
+                src = img_bdr.get('data-original') or img_bdr.get('src')
+                if src:
+                    return src.split('?')[0]
+
+            # 최종 수단: 정규식으로 대소문자 고려해 Goods/ 와 goods/ 매칭
+            urls = re.findall(r'https://image\.yes24\.com/[Gg]oods/\d+/[^"\'\s>]+', r.text)
             for u in urls:
-                if 'SpineShelf' not in u and ('cover' in u or 'product' in u):
-                    clean_url = u.split('?')[0].split('"')[0].split("'")[0]
-                    return clean_url
+                if any(x in u for x in ['XL', 'L', 'M', 'normal']):
+                    return u.split('?')[0].split('"')[0].split("'")[0]
             if urls:
                 return urls[0].split('?')[0].split('"')[0].split("'")[0]
     except Exception as e:
-        print(f"     (알라딘 표지 크롤링 실패): {e}")
+        print(f"     (YES24 표지 크롤링 실패): {e}")
 
     return None
 

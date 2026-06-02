@@ -43,8 +43,14 @@ def build_candidate_pool(region: str, age: str, start: str, end: str, size: int)
 
 def build_weekly_targets(region: str = "11", age: str = "20", search_date: str | None = None,
                          start: str | None = None, end: str | None = None,
-                         pool_size: int = 12, per_type: int = 2) -> dict:
-    """A/B/C 타입별 제작 대상을 선정한다."""
+                         pool_size: int = 12, per_type: int = 2,
+                         solomon_path: str | None = None, curation_path: str | None = None) -> dict:
+    """A/B/C 타입별 제작 대상을 선정한다.
+    
+    사서가 솔로몬 CSV(장서 평가 점수)와 큐레이션 CSV(화제 도서 직접 지정)를 업로드한 경우 교차 반영한다.
+    """
+    import os
+    import csv
     if not (start and end):
         start, end = _last_month_range()
     if not search_date:
@@ -53,31 +59,77 @@ def build_weekly_targets(region: str = "11", age: str = "20", search_date: str |
     pool = build_candidate_pool(region, age, start, end, pool_size)
     seen: set[str] = set()
 
-    # C. 화제 도서 — hotTrend 급상승
+    # 솔로몬 장서 평가 점수 로드
+    solomon_data = {}
+    if solomon_path and os.path.exists(solomon_path):
+        try:
+            with open(solomon_path, encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    isbn = row.get("isbn", "").strip()
+                    if isbn:
+                        # evaluation 필드가 없으면 기본값 0.0
+                        solomon_data[isbn] = float(row.get("evaluation", 0.0) or 0.0)
+            print(f"[Curate] 솔로몬 CSV 데이터 로드 완료 ({len(solomon_data)}건)")
+        except Exception as e:
+            print(f"[Curate] solomon.csv 로드 중 오류 발생: {e}")
+
+    # C. 화제 도서 수집
     type_c = []
+    
+    # 1) 사서 수동 큐레이션 CSV가 있으면 우선 반영
+    if curation_path and os.path.exists(curation_path):
+        try:
+            with open(curation_path, encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    isbn = row.get("isbn", "").strip()
+                    if isbn and isbn not in seen:
+                        type_c.append({
+                            "isbn": isbn,
+                            "title": row.get("title", "수동 큐레이션 도서").strip(),
+                            "author": row.get("author", "").strip(),
+                            "reason": "사서 추천 트렌드 큐레이션 도서"
+                        })
+                        seen.add(isbn)
+            print(f"[Curate] 수동 큐레이션 CSV 데이터 로드 완료 ({len(type_c)}건)")
+        except Exception as e:
+            print(f"[Curate] curation.csv 로드 중 오류 발생: {e}")
+
+    # 2) 대출 급상승(hotTrend) 도서 추가로 수집 채움
     for t in enrich.get_trending_books(search_date, limit=per_type * 4):
+        if len(type_c) >= per_type:
+            break
         if t["isbn"] and t["isbn"] not in seen:
             jump = t.get("rank_jump")
             type_c.append({**t, "reason": f"대출 급상승(전주 대비 {jump}위↑, 현재 {t.get('rank')}위)"})
             seen.add(t["isbn"])
-        if len(type_c) >= per_type:
-            break
 
     pool = [b for b in pool if b["isbn"] not in seen]
 
-    # B. 회전율 개선 — 근사 회전율 최저
+    # B. 회전율 개선 — 근사 회전율 최저 도서 선정
     type_b = []
     for b in sorted(pool, key=lambda x: x["turnover"])[:per_type]:
         type_b.append({**b,
             "reason": f"근사 회전율 {b['turnover']} (지역 {b['holding_libraries']}곳 소장 대비 대출 저조) → 노출 강화"})
         seen.add(b["isbn"])
 
-    # A. 숨은 명저 — 남은 후보 중 전국 누적대출 최상위(검증된 양서)
+    # A. 숨은 명저 — 남은 후보 중 전국 누적대출 최상위(검증된 양서).
+    # 솔로몬 평가 점수가 높은 도서(>= 4.0)가 있는 경우 우선순위 가중치를 주어 상단에 노출되도록 함.
     rest = [b for b in pool if b["isbn"] not in seen]
     type_a = []
-    for b in sorted(rest, key=lambda x: x["national_loan"], reverse=True)[:per_type]:
-        type_a.append({**b,
-            "reason": f"전국 누적대출 {b['national_loan']:,}건의 검증된 양서 → 우리 지역 재조명"})
+    
+    # 정렬 키: (솔로몬 평점 4.0 이상 여부 (True=1, False=0), 전국 누적 대출 수)
+    def sort_key_for_hidden_gems(book):
+        isbn = book.get("isbn")
+        is_high_eval = 1 if solomon_data.get(isbn, 0.0) >= 4.0 else 0
+        return (is_high_eval, book.get("national_loan", 0))
+
+    for b in sorted(rest, key=sort_key_for_hidden_gems, reverse=True)[:per_type]:
+        isbn = b.get("isbn")
+        solomon_score = solomon_data.get(isbn, 0.0)
+        reason = f"전국 누적대출 {b['national_loan']:,}건의 검증된 양서 → 우리 지역 재조명"
+        if solomon_score >= 4.0:
+            reason = f"[솔로몬 추천 평점 {solomon_score}] 전국 검증 도서 ({b['national_loan']:,}건 대출) ➡️ 우리 도서관 숨은 명저 선정"
+        type_a.append({**b, "reason": reason})
 
     return {
         "region": region, "age": age, "period": [start, end], "search_date": search_date,

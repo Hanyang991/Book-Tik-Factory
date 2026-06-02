@@ -52,8 +52,13 @@ def find_holding_libraries(isbn: str, region: str = "11", limit: int = 5) -> dic
     """
     j = _get("libSrchByBook", isbn=isbn, region=region, pageSize=str(limit))
     libs = [
-        {"name": d["lib"].get("libName", ""), "address": d["lib"].get("address", ""),
-         "code": d["lib"].get("libCode", "")}
+        {
+            "name": d["lib"].get("libName", ""),
+            "address": d["lib"].get("address", ""),
+            "code": d["lib"].get("libCode", ""),
+            "lat": float(d["lib"].get("latitude", 0.0) or 0.0),
+            "lng": float(d["lib"].get("longitude", 0.0) or 0.0)
+        }
         for d in j.get("libs", [])
     ]
     return {"total": int(j.get("numFound", 0) or 0), "libraries": libs}

@@ -4,3 +4,4 @@ edge-tts
 google-genai
 qrcode[pil]
 Pillow
+python-dotenv

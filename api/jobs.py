@@ -13,6 +13,8 @@ class Job:
     region: str
     status: str = "queued"          # queued | running | done | failed
     stage: str = ""                  # 현재 단계(서지조회/대본/TTS/...)
+    title: Optional[str] = None
+    author: Optional[str] = None
     video_path: Optional[str] = None
     error: Optional[str] = None
     created_at: float = field(default_factory=time.time)

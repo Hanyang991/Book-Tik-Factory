@@ -88,9 +88,9 @@ def rich_script(book: dict) -> str:
 def _sanitize(line: str) -> str:
     """대본 한 줄에서 마크다운 강조/불릿을 제거(자막·TTS에 그대로 노출되지 않게)."""
     import re
-    line = re.sub(r"[*_`#]", "", line)          # *강조*, `코드`, # 헤더 제거
+    line = re.sub(r"[*_`#<>~]", "", line)        # *강조*, `코드`, #, <>, ~ 제거(TTS가 기호를 읽지 않게)
     line = re.sub(r"^\s*[-•]\s*", "", line)       # 불릿 제거
-    return line.strip()
+    return re.sub(r"\s{2,}", " ", line).strip()
 
 
 def split_sentences(script: str) -> list[str]:

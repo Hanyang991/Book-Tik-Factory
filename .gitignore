@@ -18,3 +18,10 @@ outputs/
 .DS_Store
 .idea/
 .vscode/
+
+# Node / frontend
+node_modules/
+figma_extracted/node_modules/
+figma_extracted/dist/
+figma_extracted/.pnpm-store/
+figma.zip

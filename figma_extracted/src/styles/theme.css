@@ -1,0 +1,165 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Bookshop Welcome Theme (Mobile - Light) */
+  --bg-primary: #faf7f2;
+  --bg-card: #ffffff;
+  --bg-card-alt: #f0ebe2;
+  --accent-green: #355e3b;
+  --accent-green-soft: rgba(53, 94, 59, 0.10);
+  --accent-amber: #c8962a;
+  --text-primary: #2c1810;
+  --text-secondary: rgba(44, 24, 16, 0.60);
+  --border-default: #e8e0d4;
+
+  /* State Colors */
+  --state-success: #2d6a4f;
+  --state-warning: #b7791f;
+  --state-error: #9b1c1c;
+  --state-info: #5a6e7f;
+
+  /* Spacing Tokens */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  --font-size: 16px;
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --primary: var(--accent-green);
+  --primary-foreground: #ffffff;
+  --secondary: var(--bg-card-alt);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-card-alt);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-green-soft);
+  --accent-foreground: var(--accent-green);
+  --destructive: var(--state-error);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-default);
+  --input: var(--border-default);
+  --ring: var(--accent-green);
+  --radius: 0.625rem;
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+}
+
+.dark {
+  /* Librarian's Study Theme (Dashboard - Dark) */
+  --bg-primary: #1a0f0a;
+  --bg-card: #2c1810;
+  --bg-card-hover: #3a2218;
+  --accent-amber: #d4a24c;
+  --accent-amber-soft: rgba(212, 162, 76, 0.15);
+  --accent-burgundy: #8b2635;
+  --accent-burgundy-soft: rgba(139, 38, 53, 0.15);
+  --text-primary: #f5f0e8;
+  --text-secondary: rgba(245, 240, 232, 0.60);
+  --text-muted: rgba(245, 240, 232, 0.35);
+  --border-default: rgba(212, 162, 76, 0.12);
+  --border-subtle: rgba(245, 240, 232, 0.06);
+
+  --background: var(--bg-primary);
+  --foreground: var(--text-primary);
+  --card: var(--bg-card);
+  --card-foreground: var(--text-primary);
+  --primary: var(--accent-amber);
+  --primary-foreground: #1a0f0a;
+  --secondary: var(--bg-card-hover);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--bg-card-hover);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--accent-amber-soft);
+  --accent-foreground: var(--accent-amber);
+  --destructive: var(--state-error);
+  --destructive-foreground: var(--text-primary);
+  --border: var(--border-default);
+  --input: rgba(245, 240, 232, 0.04);
+  --ring: var(--accent-amber);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Noto Sans KR', 'Dotum', '돋움', sans-serif;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Noto Sans KR', 'Dotum', '돋움', sans-serif;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  h3 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  p, label {
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  button {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  code, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}

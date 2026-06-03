@@ -24,7 +24,12 @@ def _get(endpoint: str, **params) -> dict:
     params.update({"authKey": _KEY, "format": "json"})
     r = requests.get(f"{BASE}/{endpoint}", params=params, timeout=40)
     r.raise_for_status()
-    return r.json().get("response", {})
+    res = r.json()
+    if "errCode" in res or "error" in res:
+        err_msg = res.get("error") or res.get("errCode")
+        print(f"  [정보나루 API 오류] {endpoint} 실패: {err_msg}")
+        raise RuntimeError(f"정보나루 API 오류 ({res.get('errCode')}): {err_msg}")
+    return res.get("response", {})
 
 
 def get_book_usage(isbn: str) -> dict:
@@ -52,8 +57,13 @@ def find_holding_libraries(isbn: str, region: str = "11", limit: int = 5) -> dic
     """
     j = _get("libSrchByBook", isbn=isbn, region=region, pageSize=str(limit))
     libs = [
-        {"name": d["lib"].get("libName", ""), "address": d["lib"].get("address", ""),
-         "code": d["lib"].get("libCode", "")}
+        {
+            "name": d["lib"].get("libName", ""),
+            "address": d["lib"].get("address", ""),
+            "code": d["lib"].get("libCode", ""),
+            "lat": float(d["lib"].get("latitude", 0.0) or 0.0),
+            "lng": float(d["lib"].get("longitude", 0.0) or 0.0)
+        }
         for d in j.get("libs", [])
     ]
     return {"total": int(j.get("numFound", 0) or 0), "libraries": libs}

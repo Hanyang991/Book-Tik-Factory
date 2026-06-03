@@ -8,6 +8,9 @@ Verifies the risky path end-to-end with REAL services:
 Not covered here (blocked on 정보나루 key activation): 회전율 산출, hotTrend, locate.
 Background uses a generated gradient (Pexels API is the production source).
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 import time
 import asyncio
@@ -81,7 +84,7 @@ def generate_script(book: dict, retries: int = 6) -> str:
     for i in range(retries):
         try:
             r = _genai.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash",
                 contents=user,
                 config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
             )

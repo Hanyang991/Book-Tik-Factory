@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로컬 북-틱 팩토리 — 통제 센터</title>
+    <!-- Google Fonts: Outfit (English/Accents), Noto Sans KR (Korean) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(25, 30, 48, 0.45);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-blue: #3b82f6;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --font-main: 'Outfit', 'Noto Sans KR', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.08) 0%, transparent 40%);
+            color: var(--text-primary);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Header Area */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 48px;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(11, 15, 25, 0.7);
+            backdrop-filter: blur(10px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 20px;
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        .logo-title {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            color: var(--success-color);
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--success-color);
+            animation: blink 1.5s infinite ease-in-out;
+        }
+
+        /* Container Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                padding: 24px;
+            }
+        }
+
+        /* Common Glass Card */
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            border-left: 4px solid var(--accent-purple);
+            padding-left: 12px;
+        }
+
+        /* Control Panel Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: white;
+            font-family: var(--font-main);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            border: none;
+            color: white;
+            padding: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+            filter: brightness(1.1);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        /* Live Monitor Tables */
+        .job-table-container {
+            overflow-x: auto;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 14px 16px;
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td {
+            padding: 16px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge-queued {
+            background: rgba(156, 163, 175, 0.1);
+            color: var(--text-secondary);
+            border: 1px solid rgba(156, 163, 175, 0.2);
+        }
+
+        .badge-running {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-purple);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            animation: pulse-glow 2s infinite;
+        }
+
+        .badge-done {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-failed {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Action Buttons */
+        .action-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-purple);
+            border-color: var(--accent-purple);
+            transform: translateY(-1px);
+        }
+
+        /* Stat Panel */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, var(--accent-pink));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Weekly Curation Section */
+        .curation-section {
+            margin-top: 30px;
+        }
+
+        .curation-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .curation-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .curation-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .curation-results {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 13px;
+            max-height: 250px;
+            overflow-y: auto;
+            color: #d1d5db;
+        }
+
+        .curation-type-header {
+            color: var(--accent-pink);
+            font-weight: 600;
+            margin-top: 14px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid rgba(236, 72, 153, 0.2);
+            padding-bottom: 4px;
+        }
+
+        .curation-item {
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        /* Modal Video Preview Player */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #0f1322;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 440px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 20px;
+            font-size: 24px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        video {
+            width: 100%;
+            border-radius: 12px;
+            aspect-ratio: 9/16;
+            background: black;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Keyframes */
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+                transform: scale(1);
+            }
+            50% {
+                box-shadow: 0 4px 25px rgba(139, 92, 246, 0.7);
+                transform: scale(1.03);
+            }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-section">
+            <div class="logo-icon">B</div>
+            <div class="logo-title">Local Book-Tik Factory</div>
+        </div>
+        <div class="system-status">
+            <span class="status-dot"></span>
+            통제 서버 작동 중 (온라인)
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Left Panel: Form Controls and Statistics -->
+        <div class="left-panel">
+            <div class="glass-card" style="margin-bottom: 32px;">
+                <div class="card-title">현황 요약</div>
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-active-jobs">0</div>
+                        <div class="stat-label">진행 작업</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-completed-jobs">0</div>
+                        <div class="stat-label">제작 완료</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="stat-failed-jobs" style="color: var(--danger-color)">0</div>
+                        <div class="stat-label">오류 실패</div>
+                    </div>
+                </div>
+
+                <div class="card-title">숏폼 수동 생성 요청</div>
+                <form id="generate-form">
+                    <div class="form-group">
+                        <label for="isbn">ISBN-13 (하이픈 없음)</label>
+                        <input type="text" id="isbn" placeholder="예: 9788937473135" required minlength="13" maxlength="13">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom_description">한 줄 줄거리 / 책 소개 보완 (선택)</label>
+                        <input type="text" id="custom_description" placeholder="LOD에 소개가 없는 경우 직접 한 줄 요약을 적어주세요">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom_keywords">추천 키워드 보완 (선택, 쉼표 구분)</label>
+                        <input type="text" id="custom_keywords" placeholder="예: 소외감, 페미니즘, 한국소설">
+                    </div>
+                    <div class="form-group">
+                        <label for="region">지역 코드 (정보나루)</label>
+                        <select id="region">
+                            <option value="11" selected>서울특별시 (11)</option>
+                            <option value="41">경기도 (41)</option>
+                            <option value="26">부산광역시 (26)</option>
+                            <option value="27">대구광역시 (27)</option>
+                            <option value="28">인천광역시 (28)</option>
+                            <option value="29">광주광역시 (29)</option>
+                            <option value="30">대전광역시 (30)</option>
+                            <option value="31">울산광역시 (31)</option>
+                            <option value="51">강원도 (51)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        북트레일러 생성 큐 예약
+                    </button>
+                </form>
+            </div>
+
+            <!-- Weekly Curation Explorer -->
+            <div class="glass-card curation-section">
+                <div class="card-title">주간 자동 선정 큐레이션</div>
+                <div class="curation-buttons">
+                    <button type="button" class="curation-btn" onclick="previewCuration()">선정 대상 미리보기</button>
+                </div>
+                <div class="curation-results" id="curation-box">
+                    <p style="color: var(--text-secondary); text-align: center; margin-top: 60px;">"선정 대상 미리보기" 버튼을 눌러 회전율 및 대출 분석 기반 주간 숏폼 제작 대상을 확인하세요.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Live Queue Monitor -->
+        <div class="right-panel">
+            <div class="glass-card" style="height: 100%; min-height: 600px;">
+                <div class="card-title">실시간 생성 대기열 모니터 (Auto-polling)</div>
+                <div class="job-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>도서 ISBN</th>
+                                <th>진행 상태</th>
+                                <th>현재 상세 단계</th>
+                                <th>생성 시간</th>
+                                <th>미리보기 / 다운로드</th>
+                            </tr>
+                        </thead>
+                        <tbody id="job-list-tbody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 100px 0; color: var(--text-secondary);">
+                                    등록된 비디오 생성 Job이 없습니다. 왼쪽 양식에서 ISBN을 입력해 생성해 보세요!
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Video Modal Player -->
+    <div class="modal" id="video-modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <div class="modal-title" id="modal-video-title">북트레일러 미리보기</div>
+            <video id="modal-video" controls></video>
+        </div>
+    </div>
+
+    <script>
+        let pollingInterval = null;
+
+        // Form Submit handler
+        document.getElementById('generate-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const isbnInput = document.getElementById('isbn').value.trim();
+            const regionSelect = document.getElementById('region').value;
+            const descInput = document.getElementById('custom_description').value.trim();
+            const keywordsInput = document.getElementById('custom_keywords').value.trim();
+
+            if (!isbnInput || isbnInput.length !== 13 || isNaN(isbnInput)) {
+                alert('정확한 13자리 숫자 ISBN을 입력해 주세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        isbn: isbnInput, 
+                        region: regionSelect,
+                        custom_description: descInput || null,
+                        custom_keywords: keywordsInput || null
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    alert(`비디오 생성 작업이 등록되었습니다! (JobID: ${data.job_id})`);
+                    document.getElementById('isbn').value = '';
+                    document.getElementById('custom_description').value = '';
+                    document.getElementById('custom_keywords').value = '';
+                    fetchJobs(); // Update table immediately
+                } else {
+                    alert(`오류: ${data.detail || '요청 실패'}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('네트워크 오류가 발생했습니다.');
+            }
+        });
+
+        // Fetch jobs list
+        async function fetchJobs() {
+            try {
+                const response = await fetch('/api/jobs');
+                const jobs = await response.json();
+
+                const tbody = document.getElementById('job-list-tbody');
+                
+                // Stat counters
+                let active = 0;
+                let completed = 0;
+                let failed = 0;
+
+                if (!jobs || jobs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 100px 0; color: var(--text-secondary);">등록된 비디오 생성 Job이 없습니다.</td></tr>`;
+                    updateStats(0, 0, 0);
+                    return;
+                }
+
+                // Sort by created time descending
+                jobs.sort((a, b) => b.created_at - a.created_at);
+
+                tbody.innerHTML = '';
+                jobs.forEach(job => {
+                    // Count stats
+                    if (job.status === 'queued' || job.status === 'running') active++;
+                    else if (job.status === 'done') completed++;
+                    else if (job.status === 'failed') failed++;
+
+                    // Format status badge
+                    let statusClass = 'badge-queued';
+                    let statusLabel = '대기';
+                    if (job.status === 'running') {
+                        statusClass = 'badge-running';
+                        statusLabel = '생성 중';
+                    } else if (job.status === 'done') {
+                        statusClass = 'badge-done';
+                        statusLabel = '성공';
+                    } else if (job.status === 'failed') {
+                        statusClass = 'badge-failed';
+                        statusLabel = '실패';
+                    }
+
+                    // Format created_at to HH:MM:SS
+                    const date = new Date(job.created_at * 1000);
+                    const timeStr = `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`;
+
+                    // Action buttons
+                    let actionHtml = `<span style="color: var(--text-secondary); font-size: 12px;">대기 중...</span>`;
+                    if (job.status === 'done') {
+                        actionHtml = `
+                            <button class="action-btn" onclick="playVideo('${job.id}', '${job.isbn}')">📺 미리보기</button>
+                            <a class="action-btn" href="/video/${job.id}" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2);">💾 MP4 저장</a>
+                            <a class="action-btn" href="/locate?isbn=${job.isbn}" target="_blank" style="background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2);">🔗 QR연동 확인</a>
+                        `;
+                    } else if (job.status === 'failed') {
+                        actionHtml = `<span style="color: var(--danger-color); font-size: 12px; font-weight: 500;" title="${job.error || ''}">⚠️ 오류 상세: ${job.error ? job.error.slice(0, 20) + '...' : '알 수 없음'}</span>`;
+                    } else if (job.status === 'running') {
+                        actionHtml = `<span style="color: var(--accent-purple); font-size: 13px; font-weight: 500;">진행 중...</span>`;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-family: 'Outfit'; font-weight: 600;">${job.id}</td>
+                        <td style="font-family: 'Outfit';">${job.isbn}</td>
+                        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+                        <td style="font-weight: 500; color: ${job.status==='running' ? 'var(--accent-pink)' : 'var(--text-primary)'}">${job.stage || '대기'}</td>
+                        <td style="font-size: 13px; color: var(--text-secondary);">${timeStr}</td>
+                        <td><div style="display: flex; gap: 8px;">${actionHtml}</div></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                updateStats(active, completed, failed);
+
+            } catch (err) {
+                console.error('Error fetching jobs:', err);
+            }
+        }
+
+        function updateStats(active, completed, failed) {
+            document.getElementById('stat-active-jobs').innerText = active;
+            document.getElementById('stat-completed-jobs').innerText = completed;
+            document.getElementById('stat-failed-jobs').innerText = failed;
+        }
+
+        // Preview Curation list
+        async function previewCuration() {
+            const box = document.getElementById('curation-box');
+            box.innerHTML = `<p style="text-align: center; color: var(--accent-pink); padding: 50px 0;">정보나루 데이터 수집 및 회전율 교차 분석 중...</p>`;
+            try {
+                const response = await fetch('/api/curation');
+                const data = await response.json();
+                
+                box.innerHTML = '';
+                
+                const labels = {
+                    "A_숨은명저": "A. 우리 도서관 숨은 명저",
+                    "B_회전율개선": "B. 대출 노출강화 / 회전율 개선 도서",
+                    "C_화제도서": "C. 유튜브/SNS 대출 급상승 화제 도서"
+                };
+
+                let empty = true;
+                for (let key in labels) {
+                    const list = data[key] || [];
+                    if (list.length > 0) {
+                        empty = false;
+                        const header = document.createElement('div');
+                        header.className = 'curation-type-header';
+                        header.innerText = labels[key];
+                        box.appendChild(header);
+
+                        list.forEach(book => {
+                            const div = document.createElement('div');
+                            div.className = 'curation-item';
+                            div.innerHTML = `
+                                <strong>${book.title || '제목 없음'}</strong> (${book.author || '저자 미상'})<br>
+                                <span style="font-size: 11px; color: var(--text-secondary);">- ISBN: ${book.isbn} | 근거: ${book.reason}</span>
+                            `;
+                            box.appendChild(div);
+                        });
+                    }
+                }
+
+                if (empty) {
+                    box.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 50px 0;">선정된 데이터가 없습니다.</p>`;
+                }
+            } catch (err) {
+                console.error(err);
+                box.innerHTML = `<p style="text-align: center; color: var(--danger-color); padding: 50px 0;">큐레이션 조회 중 오류가 발생했습니다.</p>`;
+            }
+        }
+
+        // Modal Video Player Control
+        function playVideo(jobId, isbn) {
+            const modal = document.getElementById('video-modal');
+            const video = document.getElementById('modal-video');
+            const title = document.getElementById('modal-video-title');
+            
+            title.innerText = `북트레일러 미리보기 [ISBN: ${isbn}]`;
+            video.src = `/video/${jobId}`;
+            modal.style.display = 'flex';
+            video.play();
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('video-modal');
+            const video = document.getElementById('modal-video');
+            video.pause();
+            video.src = '';
+            modal.style.display = 'none';
+        }
+
+        // Initialize and setup polling
+        window.addEventListener('load', () => {
+            fetchJobs();
+            // Start polling every 3 seconds
+            pollingInterval = setInterval(fetchJobs, 3000);
+        });
+
+        window.addEventListener('unload', () => {
+            if (pollingInterval) clearInterval(pollingInterval);
+        });
+    </script>
+</body>
+</html>

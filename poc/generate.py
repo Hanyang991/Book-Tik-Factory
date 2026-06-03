@@ -239,7 +239,7 @@ def split_sentences(script: str) -> list[str]:
     return [c for c in (_sanitize(s) for s in script.split("\n")) if c]
 
 
-def tts_per_sentence(sentences: list[str], base: str, tail: float = TAIL_SEC):
+def tts_per_sentence(sentences: list[str], base: str, book_title: str = "", tail: float = TAIL_SEC):
     """문장별로 TTS를 만들어 각 문장의 실제 길이를 측정한 뒤 하나로 이어붙인다.
 
     반환: (audio_path, durations[문장별], narration_dur, total_dur)
@@ -271,12 +271,42 @@ def tts_per_sentence(sentences: list[str], base: str, tail: float = TAIL_SEC):
         durations.append(P.get_audio_duration(wav_tmp))
         wav_parts.append(wav_tmp)
 
-    # 무음 아웃트로(QR 전용) — TTS와 동일한 48kHz mono PCM
+    # 을/를 조사 자동 선택 헬퍼 함수
+    def get_josa(word: str) -> str:
+        if not word:
+            return "을"
+        last_char = word[-1]
+        if '가' <= last_char <= '힣':
+            if (ord(last_char) - 0xAC00) % 28 > 0:
+                return "을"
+            else:
+                return "를"
+        return "을"
+
+    outro_text = "가까운 도서관에서 만나보세요."
+    if book_title:
+        # 부제목이나 정규형 지저분한 타이틀 접미사 제거
+        clean_title = book_title.split(":")[0].split("=")[0].split("(")[0].strip()
+        josa = get_josa(clean_title)
+        outro_text = f"{clean_title}{josa} 가까운 도서관에서 만나보세요."
+
+    # 아웃트로 QR용 음성 안내 생성
+    outro_mp3 = f"{base}_outro.mp3"
+    outro_wav = f"{base}_outro.wav"
+    asyncio.run(_save(outro_text, outro_mp3))
+    # MP3 → WAV 변환 (48kHz mono PCM 통일)
+    subprocess.run(
+        ["ffmpeg", "-nostdin", "-y", "-i", outro_mp3,
+         "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", outro_wav],
+        check=True, capture_output=True)
+    wav_parts.append(outro_wav)
+
+    # 음성 안내 종료 후 화면 여운용 짧은 무음 추가 (1.0초)
     silence = f"{base}_sil.wav"
     subprocess.run(
         ["ffmpeg", "-nostdin", "-y", "-f", "lavfi", "-i",
          "anullsrc=channel_layout=mono:sample_rate=48000",
-         "-t", f"{tail}", "-c:a", "pcm_s16le", silence],
+         "-t", "1.0", "-c:a", "pcm_s16le", silence],
         check=True, capture_output=True)
     wav_parts.append(silence)
 
@@ -507,8 +537,8 @@ def run(isbn: str, region: str = "11", progress=None, custom_description: str | 
 
     base = os.path.join(OUT, isbn)
     step("[3/6] 문장별 Edge TTS + 실측 길이 측정")
-    audio, durations, narration, total = tts_per_sentence(sentences, base)
-    print(f"     -> 나레이션 {round(narration,1)}s + 아웃트로 {TAIL_SEC}s = {round(total,1)}s")
+    audio, durations, narration, total = tts_per_sentence(sentences, base, book.get("title", ""))
+    print(f"     -> 나레이션 {round(narration,1)}s + 아웃트로 {round(total - narration, 1)}s = {round(total,1)}s")
 
     step("[4/6] 표지 배경 + locate(QR 라벨)")
     image = cover_background(book.get("cover_url", ""), book.get("genre", "book"), base + ".jpg")

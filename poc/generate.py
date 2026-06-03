@@ -30,7 +30,7 @@ import pipeline as P
 OUT = os.path.join(os.path.dirname(__file__), "outputs")
 os.makedirs(OUT, exist_ok=True)
 
-FONT_FILE = "C:/Windows/Fonts/batang.ttc" if os.name == "nt" else "/usr/share/fonts/truetype/nanum/NanumMyeongjo.ttf"
+FONT_FILE = "C:/Windows/Fonts/malgun.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/nanum/NanumGothicBold.ttf"
 TAIL_SEC = 2.6  # 나레이션 뒤 QR 전용 아웃트로 길이
 
 RICH_SYSTEM = """당신은 대한민국 최고의 숏폼 북트레일러 카피라이터입니다.
@@ -488,8 +488,8 @@ def render(audio, image, srt, qr, out_path, narration_dur: float) -> str:
     # 오인한다. cwd를 SRT 디렉토리로 맞추고 basename만 넘겨 회피한다.
     srt_dir = os.path.dirname(os.path.abspath(srt))
     srt_name = os.path.basename(srt)
-    font = "Batang" if os.name == "nt" else "NanumMyeongjo"
-    style = (f"subtitles={srt_name}:force_style='FontName={font},Bold=0,FontSize=19,"
+    font = "Malgun Gothic" if os.name == "nt" else P.FONT
+    style = (f"subtitles={srt_name}:force_style='FontName={font},Bold=1,FontSize=19,"
              "PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=3,Shadow=1,"
              "Alignment=2,MarginV=40'")
     base_vf = f"scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,{style}"

@@ -116,11 +116,11 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Serif KR', 'KoPub Batang', 'Batang', serif;
   }
 
   h1, h2, h3, h4 {
-    font-family: 'Noto Serif KR', serif;
+    font-family: 'Noto Serif KR', 'KoPub Batang', 'Batang', serif;
   }
 
   h1 {
